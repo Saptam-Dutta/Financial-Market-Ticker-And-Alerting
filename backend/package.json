@@ -12,5 +12,8 @@
     "dotenv": "^16.0.0",
     "redis": "^4.6.0",
     "ws": "^8.19.0"
-  }
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "type": "commonjs"
 }
