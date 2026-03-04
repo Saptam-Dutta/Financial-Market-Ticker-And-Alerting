@@ -1,44 +1,41 @@
 const WebSocket = require("ws");
-require("dotenv").config();
 
-const parseTrade = require("./parser");
-const { client } = require("./redisClient");
+function startWebSocket(onPriceUpdate) {
 
-const SYMBOL = process.env.SYMBOL;
-const WS_URL = `${process.env.WS_BASE}/${SYMBOL}@trade`;
-const RECONNECT_DELAY = process.env.RECONNECT_DELAY || 3000;
-
-let ws;
-
-function startWebSocket() {
   console.log("Connecting to Binance...");
 
-  ws = new WebSocket(WS_URL);
+  const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
 
   ws.on("open", () => {
-    console.log("✅ WebSocket connected");
+    console.log("WebSocket connected");
   });
 
-  ws.on("message", async (msg) => {
-    const trade = parseTrade(msg);
+  ws.on("message", (data) => {
 
-    if (!trade) return;
+    const trade = JSON.parse(data);
 
-    console.log("Price:", trade.price);
+    const price = parseFloat(trade.p);
+    const timestamp = trade.T;
 
-    // cache latest price
-    await client.set(`${trade.symbol}:latest`, trade.price);
-  });
+    const entry = {
+      price,
+      timestamp
+    };
 
-  ws.on("close", () => {
-    console.log("⚠️ WebSocket disconnected");
-    setTimeout(startWebSocket, RECONNECT_DELAY);
+    if (onPriceUpdate) {
+      onPriceUpdate(entry);
+    }
+
   });
 
   ws.on("error", (err) => {
-    console.error("WS error:", err.message);
-    ws.close();
+    console.error("WebSocket error:", err.message);
   });
+
+  ws.on("close", () => {
+    console.log("WebSocket disconnected");
+  });
+
 }
 
 module.exports = startWebSocket;
