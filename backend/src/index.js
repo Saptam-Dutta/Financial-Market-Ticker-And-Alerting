@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 
@@ -14,53 +13,112 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// price history buffer
+// In‑memory storage
 let priceHistory = [];
+let alerts = [];
 
-// health check
+/*
+-----------------------------------
+Health Check
+-----------------------------------
+*/
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
-// latest price
+/*
+-----------------------------------
+Latest Price Endpoint
+-----------------------------------
+*/
 app.get("/price", (req, res) => {
   const latest = priceHistory[priceHistory.length - 1];
   res.json(latest || {});
 });
 
-// price history
+/*
+-----------------------------------
+Price History
+-----------------------------------
+*/
 app.get("/history", (req, res) => {
   res.json(priceHistory);
 });
 
-// candlestick endpoint
+/*
+-----------------------------------
+Candlestick Data
+-----------------------------------
+*/
 app.get("/candles", (req, res) => {
-  const timeframe = parseInt(req.query.tf);
-
+  const timeframe = parseInt(req.query.tf) || 5;
   const candles = aggregateCandles(priceHistory, timeframe);
-
   res.json(candles);
 });
 
+/*
+-----------------------------------
+Create Price Alert
+-----------------------------------
+*/
+app.post("/alert", (req, res) => {
+  const { price } = req.body;
+
+  if (!price) {
+    return res.status(400).json({
+      error: "Price required"
+    });
+  }
+
+  alerts.push(Number(price));
+
+  res.json({
+    message: "Alert added",
+    alerts
+  });
+});
+
+/*
+-----------------------------------
+Start Server + WebSocket
+-----------------------------------
+*/
 async function start() {
 
+  // Connect Redis
   await connectRedis();
+  console.log("Redis connected");
 
-  // start websocket and store incoming prices
+  // Start WebSocket price stream
   startWebSocket((priceData) => {
 
-    priceHistory.push(priceData);
+    const data = {
+      price: Number(priceData.price),
+      time: Date.now()
+    };
 
-    if (priceHistory.length > 200) {
+    priceHistory.push(data);
+
+    // prevent memory overflow
+    if (priceHistory.length > 500) {
       priceHistory.shift();
     }
 
+    // check alerts
+    alerts.forEach(alertPrice => {
+      if (data.price >= alertPrice) {
+        console.log("🚨 ALERT: Price reached", alertPrice);
+      }
+    });
+
   });
 
+  // START API SERVER (this was missing)
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
 
 }
 
+// Start application
 start();
