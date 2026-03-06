@@ -1,20 +1,6 @@
-version: "3.8"
-
 services:
   redis:
     image: redis:7
     container_name: redis
     ports:
       - "6379:6379"
-    restart: always
-
-  backend:
-    build: .
-    container_name: market-backend
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      - redis
-    restart: always
