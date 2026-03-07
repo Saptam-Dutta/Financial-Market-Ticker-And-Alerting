@@ -1,6 +1,12 @@
+// ============================================================
+// app.js — Financial Market Ticker Dashboard
+// Author: Gavit Priyanshu Bhimsing (Frontend & Visualization Lead)
+// US-8: Real-Time Candlestick Chart Display
+// US-10: Timeframe Selection (1m, 5m, 1h, 1d)
+// ============================================================
+
 const BACKEND_URL = "http://localhost:3000";
 
-// Timeframe config: label → minutes value sent to /candles?tf=
 const TIMEFRAMES = [
   { label: "1m",  tf: 1    },
   { label: "5m",  tf: 5    },
@@ -8,32 +14,61 @@ const TIMEFRAMES = [
   { label: "1d",  tf: 1440 },
 ];
 
-const DEFAULT_TF = 5; // default timeframe in minutes
+const DEFAULT_TF = 5;
 
 // ── DOM references ──────────────────────────────────────────
-const priceBox       = document.getElementById("priceBox");
-const tfSelectorDiv  = document.getElementById("tfSelector");
-const ctx            = document.getElementById("chart").getContext("2d");
+const priceBox      = document.getElementById("priceBox");
+const tfSelectorDiv = document.getElementById("tfSelector");
+const canvas        = document.getElementById("chart");
 
 // ── State ───────────────────────────────────────────────────
-let chart           = null;
-let selectedTf      = loadTfFromStorage(); // US-10: restore from localStorage
+let chartInstance   = null;
+let selectedTf      = loadTfFromStorage();
+let lastTfUsed      = null;
+let historicalData  = [];   // candles from Binance REST (500 candles of real history)
+let liveData        = [];   // candles aggregated from live WebSocket ticks
 
 // ============================================================
-// US-10: localStorage persistence helpers
+// localStorage helpers (US-10)
 // ============================================================
 function loadTfFromStorage() {
   const saved = localStorage.getItem("selectedTf");
   return saved ? parseInt(saved) : DEFAULT_TF;
 }
-
 function saveTfToStorage(tf) {
   localStorage.setItem("selectedTf", tf);
 }
 
 // ============================================================
+// Merge historical + live candles
+// Live candles override/extend the last historical candle
+// so the chart stays seamless as new ticks arrive
+// ============================================================
+function mergeCandles(historical, live) {
+  if (!live || live.length === 0) return historical;
+  if (!historical || historical.length === 0) return live;
+
+  // Find where live data starts and splice it onto history
+  const liveStart  = live[0].time;
+  const baseCandles = historical.filter(c => c.time < liveStart);
+  return [...baseCandles, ...live];
+}
+
+// ============================================================
+// Destroy chart — only on timeframe switch
+// ============================================================
+function destroyChart() {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+  lastTfUsed = null;
+}
+
+// ============================================================
 // Timeframe Selector UI (US-10)
-// Builds buttons and marks the currently active one
 // ============================================================
 function buildTfSelector() {
   tfSelectorDiv.innerHTML = "";
@@ -44,14 +79,14 @@ function buildTfSelector() {
     if (tf === selectedTf) btn.classList.add("active");
 
     btn.addEventListener("click", async () => {
+      if (tf === selectedTf) return;
       selectedTf = tf;
-      saveTfToStorage(tf); // US-10: persist selection
-
-      // Update active button styling
+      saveTfToStorage(tf);
       document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-
-      // Reload chart with new timeframe within 500ms (US-10 AC)
+      destroyChart();
+      historicalData = [];
+      liveData       = [];
       await loadCandleChart();
     });
 
@@ -69,7 +104,9 @@ async function updatePrice() {
     const time = data.time ? new Date(data.time).toLocaleTimeString() : "--";
     priceBox.innerHTML = `
       <span class="ticker-label">BTC / USDT</span>
-      <span class="ticker-price">$${data.price ? Number(data.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "--"}</span>
+      <span class="ticker-price">$${data.price
+        ? Number(data.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "--"}</span>
       <span class="ticker-time">Last update: ${time}</span>
     `;
   } catch (err) {
@@ -79,21 +116,88 @@ async function updatePrice() {
 }
 
 // ============================================================
-// US-8: Candlestick Chart using chartjs-chart-financial
-// Calls /candles?tf=<minutes> — aggregation done server-side (US-10 AC)
+// Build Chart.js candlestick config
+// ============================================================
+function buildChartConfig(candleData) {
+  return {
+    type: "candlestick",
+    data: {
+      datasets: [{
+        label: "BTC/USDT",
+        data: candleData,
+        color:       { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
+        borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            unit: selectedTf >= 1440 ? "day" : selectedTf >= 60 ? "hour" : "minute",
+          },
+          ticks: { color: "#aaa", maxTicksLimit: 12 },
+          grid:  { color: "rgba(255,255,255,0.05)" },
+        },
+        y: {
+          ticks: {
+            color: "#aaa",
+            callback: val => "$" + Number(val).toLocaleString(),
+          },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: item => {
+              const d = item.raw;
+              return [
+                `Open:  $${Number(d.o).toLocaleString()}`,
+                `High:  $${Number(d.h).toLocaleString()}`,
+                `Low:   $${Number(d.l).toLocaleString()}`,
+                `Close: $${Number(d.c).toLocaleString()}`,
+              ];
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+// ============================================================
+// US-8: Load candles — history + live merged
 // ============================================================
 async function loadCandleChart() {
   try {
-    const res     = await fetch(`${BACKEND_URL}/candles?tf=${selectedTf}`);
-    const candles = await res.json();
+    const wrapper = document.querySelector(".chart-wrapper");
 
-    if (!candles || candles.length === 0) {
-      console.warn("No candle data received");
+    // Step 1: Fetch Binance historical candles (500 real candles)
+    if (historicalData.length === 0) {
+      const histRes  = await fetch(`${BACKEND_URL}/candles/history?tf=${selectedTf}&limit=${selectedTf >= 1440 ? 365 : selectedTf >= 60 ? 168 : selectedTf >= 5 ? 288 : 120}`);
+      historicalData = await histRes.json();
+    }
+
+    // Step 2: Fetch live candles from our WebSocket ticks
+    const liveRes = await fetch(`${BACKEND_URL}/candles?tf=${selectedTf}`);
+    liveData      = await liveRes.json();
+
+    // Step 3: Merge — history provides the base, live extends the right edge
+    const merged = mergeCandles(historicalData, liveData);
+
+    if (!merged || merged.length === 0) {
+      wrapper.setAttribute("data-empty", "Loading chart data…");
       return;
     }
 
-    // chartjs-chart-financial expects { x, o, h, l, c }
-    const candleData = candles.map(c => ({
+    wrapper.removeAttribute("data-empty");
+
+    const candleData = merged.map(c => ({
       x: c.time,
       o: c.open,
       h: c.high,
@@ -101,70 +205,17 @@ async function loadCandleChart() {
       c: c.close,
     }));
 
-    if (chart) {
-      // Update existing chart data (smooth update, no re-render flicker)
-      chart.data.datasets[0].data = candleData;
-      chart.update("none"); // 'none' = instant, no animation on refresh
+    if (chartInstance && lastTfUsed === selectedTf) {
+      // Update in place — no flicker
+      chartInstance.data.datasets[0].data = candleData;
+      chartInstance.update("none");
     } else {
-      // Create chart for the first time
-      chart = new Chart(ctx, {
-        type: "candlestick",
-        data: {
-          datasets: [
-            {
-              label: "BTC/USDT",
-              data: candleData,
-              color: {
-                up:   "#26a69a", // green candles
-                down: "#ef5350", // red candles
-                unchanged: "#999",
-              },
-              borderColor: {
-                up:   "#26a69a",
-                down: "#ef5350",
-                unchanged: "#999",
-              },
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          scales: {
-            x: {
-              type: "time",
-              time: { unit: selectedTf >= 1440 ? "day" : selectedTf >= 60 ? "hour" : "minute" },
-              ticks: { color: "#aaa", maxTicksLimit: 10 },
-              grid:  { color: "rgba(255,255,255,0.05)" },
-            },
-            y: {
-              ticks: {
-                color: "#aaa",
-                callback: val => "$" + Number(val).toLocaleString(),
-              },
-              grid: { color: "rgba(255,255,255,0.08)" },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const d = ctx.raw;
-                  return [
-                    `Open:  $${Number(d.o).toLocaleString()}`,
-                    `High:  $${Number(d.h).toLocaleString()}`,
-                    `Low:   $${Number(d.l).toLocaleString()}`,
-                    `Close: $${Number(d.c).toLocaleString()}`,
-                  ];
-                },
-              },
-            },
-          },
-        },
-      });
+      // First render or timeframe switched
+      destroyChart();
+      chartInstance = new Chart(canvas, buildChartConfig(candleData));
+      lastTfUsed    = selectedTf;
     }
+
   } catch (err) {
     console.error("Candle chart error:", err);
   }
@@ -173,10 +224,9 @@ async function loadCandleChart() {
 // ============================================================
 // Boot sequence
 // ============================================================
-buildTfSelector();   // Render timeframe buttons (restores from localStorage)
-updatePrice();       // Fetch latest price immediately
-loadCandleChart();   // Load candlestick chart with saved/default timeframe
+buildTfSelector();
+updatePrice();
+loadCandleChart();
 
-// Auto-refresh
-setInterval(updatePrice,    2000);  // Price every 2s
-setInterval(loadCandleChart, 5000); // Chart every 5s
+setInterval(updatePrice,     2000);   // live price every 2s
+setInterval(loadCandleChart, 5000);   // chart refresh every 5s
