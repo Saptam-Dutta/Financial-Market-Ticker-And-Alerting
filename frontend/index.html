@@ -1,22 +1,42 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>Market Dashboard</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Dashboard</title>
 
+  <!-- Chart.js core -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- chartjs-adapter-date-fns: required for time scale -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <!-- chartjs-chart-financial: candlestick support (US-8) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
 <body>
 
-<h1>Market Dashboard</h1>
+  <header>
+    <h1>Market Dashboard</h1>
+    <p class="subtitle">Live Cryptocurrency Prices — BTC/USDT</p>
+  </header>
 
-<div id="priceBox">
-Loading price...
-</div>
+  <!-- Live price ticker (US-8) -->
+  <div id="priceBox">Loading price...</div>
 
-<h2>BTC/USDT Live Chart</h2>
-<canvas id="chart"></canvas>
+  <!-- Timeframe selector (US-10) -->
+  <div class="chart-controls">
+    <span class="chart-label">BTC/USDT Candlestick Chart</span>
+    <div id="tfSelector"></div>
+  </div>
 
-<script src="app.js"></script>
+  <!-- Candlestick chart canvas (US-8) -->
+  <div class="chart-wrapper">
+    <canvas id="chart"></canvas>
+  </div>
 
+  <script src="app.js"></script>
 </body>
 </html>
