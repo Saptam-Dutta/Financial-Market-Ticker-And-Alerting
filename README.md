@@ -13,14 +13,14 @@ A real-time cryptocurrency market dashboard built with Node.js, WebSocket stream
 
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 1 | Backend & Infrastructure Foundation | ✅ Completed |
-| Sprint 2 | Cloud Deployment & Dashboard | ✅ Completed |
-| Sprint 3 | Alerting, Security & Multi-Asset | 🔄 Upcoming |
-| Sprint 4 | Technical Indicators & UI Polish | 🔄 Upcoming |
+| Sprint 1 | Backend & Infrastructure Foundation | Completed |
+| Sprint 2 | Cloud Deployment & Dashboard | Completed |
+| Sprint 3 | Alerting, Security & Multi-Asset | Upcoming |
+| Sprint 4 | Technical Indicators & UI Polish | Upcoming |
 
 ---
 
-## Sprint 1 – Backend & Infrastructure Foundation ✅
+## Sprint 1 – Backend & Infrastructure Foundation
 
 ### Implemented Features
 
@@ -62,16 +62,16 @@ Redis Cache (latest:BTCUSDT)
 
 | Story | Description | Points | Status |
 |-------|-------------|--------|--------|
-| US-1 | WebSocket Market API Connection | 8 | ✅ Done |
-| US-2 | Streaming Data Parsing & Normalization | 5 | ✅ Done |
-| US-3 | Redis Live Data Caching | 8 | ✅ Done |
-| US-4 | Docker Containerization of Node.js Service | 5 | ✅ Done |
+| US-1 | WebSocket Market API Connection | 8 | Done |
+| US-2 | Streaming Data Parsing & Normalization | 5 | Done |
+| US-3 | Redis Live Data Caching | 8 | Done |
+| US-4 | Docker Containerization of Node.js Service | 5 | Done |
 
 **Sprint 1 Total: 26 / 26 points completed**
 
 ---
 
-## Sprint 2 – Cloud Deployment & Dashboard ✅
+## Sprint 2 – Cloud Deployment & Dashboard
 
 ### Implemented Features
 
@@ -135,9 +135,9 @@ WebSocket Stream (Binance) → Node.js Backend → Redis Cache
 
 | Story | Description | Points | Status |
 |-------|-------------|--------|--------|
-| US-5 | Cloud VM Container Deployment | 8 | ✅ Done |
-| US-8 | Real-Time Candlestick Chart Display | 8 | ✅ Done |
-| US-10 | Timeframe Selection (1m, 5m, 1h, 1d) | 5 | ✅ Done |
+| US-5 | Cloud VM Container Deployment | 8 | Done |
+| US-8 | Real-Time Candlestick Chart Display | 8 | Done |
+| US-10 | Timeframe Selection (1m, 5m, 1h, 1d) | 5 | Done |
 
 **Sprint 2 Total: 21 / 21 points completed**
 
