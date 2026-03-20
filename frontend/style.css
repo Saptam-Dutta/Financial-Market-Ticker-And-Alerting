@@ -1,19 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap');
 
-/* ── Reset & Base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #0d0f14;
-  --surface:    #161a22;
-  --border:     #252b38;
-  --accent:     #f0b429;
-  --green:      #26a69a;
-  --red:        #ef5350;
-  --text:       #e8eaf0;
-  --muted:      #6b7280;
-  --font-mono:  'IBM Plex Mono', monospace;
-  --font-sans:  'IBM Plex Sans', sans-serif;
+  --bg:        #0d0f14;
+  --surface:   #161a22;
+  --border:    #252b38;
+  --accent:    #f0b429;
+  --green:     #26a69a;
+  --red:       #ef5350;
+  --text:      #e8eaf0;
+  --muted:     #6b7280;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'IBM Plex Sans', sans-serif;
 }
 
 body {
@@ -22,17 +21,16 @@ body {
   font-family: var(--font-sans);
   min-height: 100vh;
   padding: 2rem;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-/* ── Header ───────────────────────────────────────────────── */
+/* ── Header ── */
 header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 1rem;
 }
-
 header h1 {
   font-family: var(--font-mono);
   font-size: 1.6rem;
@@ -40,27 +38,42 @@ header h1 {
   color: var(--accent);
   letter-spacing: 0.04em;
 }
-
 header .subtitle {
   font-size: 0.85rem;
   color: var(--muted);
   margin-top: 0.3rem;
 }
 
-/* ── Price Box (US-8) ─────────────────────────────────────── */
+/* ── Section label ── */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+.section-label .hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  opacity: 0.6;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Price Box ── */
 #priceBox {
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
   padding: 1rem 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
   gap: 1.5rem;
   flex-wrap: wrap;
 }
-
 .ticker-label {
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -68,28 +81,54 @@ header .subtitle {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-
 .ticker-price {
   font-family: var(--font-mono);
   font-size: 1.8rem;
   font-weight: 600;
   color: var(--text);
 }
-
 .ticker-time {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--muted);
   margin-left: auto;
 }
-
 .ticker-error {
   font-family: var(--font-mono);
   font-size: 0.9rem;
   color: var(--red);
 }
 
-/* ── Chart Controls (US-10) ───────────────────────────────── */
+/* ── US-9: Asset Selector ── */
+.asset-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.asset-btn {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.9rem;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.asset-btn:hover {
+  border-color: var(--asset-color, var(--accent));
+  color: var(--asset-color, var(--accent));
+}
+.asset-btn.active {
+  background: var(--asset-color, var(--accent));
+  color: #0d0f14;
+  border-color: var(--asset-color, var(--accent));
+  font-weight: 600;
+}
+
+/* ── Chart Controls ── */
 .chart-controls {
   display: flex;
   align-items: center;
@@ -98,7 +137,6 @@ header .subtitle {
   flex-wrap: wrap;
   gap: 0.75rem;
 }
-
 .chart-label {
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -106,13 +144,7 @@ header .subtitle {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-
-/* Timeframe selector buttons (US-10) */
-#tfSelector {
-  display: flex;
-  gap: 0.4rem;
-}
-
+#tfSelector { display: flex; gap: 0.4rem; }
 .tf-btn {
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -124,12 +156,7 @@ header .subtitle {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-
-.tf-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
+.tf-btn:hover { border-color: var(--accent); color: var(--accent); }
 .tf-btn.active {
   background: var(--accent);
   color: #0d0f14;
@@ -137,7 +164,7 @@ header .subtitle {
   font-weight: 600;
 }
 
-/* ── Chart Wrapper (US-8) ─────────────────────────────────── */
+/* ── Chart Wrapper ── */
 .chart-wrapper {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -145,19 +172,13 @@ header .subtitle {
   padding: 1.25rem;
   height: 420px;
   position: relative;
+  margin-bottom: 2rem;
 }
-
-#chart {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Empty state message while waiting for candle data */
+#chart { width: 100% !important; height: 100% !important; }
 .chart-wrapper[data-empty]::after {
   content: attr(data-empty);
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--font-mono);
   font-size: 0.85rem;
@@ -166,14 +187,142 @@ header .subtitle {
   pointer-events: none;
 }
 
-/* ── Responsive (US-12 prep) ──────────────────────────────── */
+/* ── US-6: Alert Panel ── */
+.alert-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+.alert-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem;
+}
+
+/* Alert form */
+.alert-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.alert-input {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.alert-input:focus { border-color: var(--accent); }
+.alert-submit {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  padding: 0.5rem;
+  background: var(--accent);
+  color: #0d0f14;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.alert-submit:hover { opacity: 0.85; }
+
+/* Alert items */
+.alert-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+}
+.alert-item.triggered {
+  border-left: 3px solid var(--green);
+  opacity: 0.8;
+}
+.alert-symbol { font-weight: 600; color: var(--accent); }
+.alert-direction { font-weight: 600; }
+.alert-direction.above { color: var(--green); }
+.alert-direction.below { color: var(--red); }
+.alert-price { color: var(--text); margin-left: auto; }
+.alert-triggered-price { color: var(--green); margin-left: auto; }
+.alert-time { color: var(--muted); font-size: 0.72rem; }
+.alert-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 0.25rem;
+  transition: color 0.15s;
+}
+.alert-delete:hover { color: var(--red); }
+.alert-empty {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 0.75rem 0;
+  text-align: center;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .alert-panel { grid-template-columns: 1fr; }
+}
 @media (max-width: 600px) {
   body { padding: 1rem; }
-
   .ticker-price { font-size: 1.4rem; }
   .ticker-time  { margin-left: 0; width: 100%; }
-
   .chart-controls { flex-direction: column; align-items: flex-start; }
-
   .chart-wrapper { height: 300px; }
+}
+
+/* ── Zoom Controls ── */
+.zoom-controls {
+  display: flex;
+  gap: 0.3rem;
+}
+.zoom-btn {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.zoom-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.zoom-btn.reset {
+  font-size: 0.9rem;
+  width: 2.2rem;
+}
+
+/* ── Chart pan cursor — handled via JS for reliability ── */
+.chart-wrapper canvas {
+  cursor: grab !important;
+}
+.chart-wrapper canvas:active {
+  cursor: grabbing !important;
 }
