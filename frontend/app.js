@@ -1,5 +1,5 @@
 
-const BACKEND_URL = "http://localhost:3000";
+const BACKEND_URL = "https://65.1.84.130";
 
 const TIMEFRAMES = [
   { label: "1m",  tf: 1    },
