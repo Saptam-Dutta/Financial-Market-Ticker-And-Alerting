@@ -1,5 +1,12 @@
+// ============================================================
+// app.js — Financial Market Ticker Dashboard
+// Author: Gavit Priyanshu Bhimsing (Frontend & Visualization Lead)
+// Sprint 2: US-8 Candlestick Chart, US-10 Timeframe Selection
+// Sprint 3: US-9 Multi-Asset Comparison, US-6 Alert UI
+// Sprint 4: US-11 EMA/RSI Technical Indicators, US-12 Responsive UI
+// ============================================================
 
-const BACKEND_URL = "https://65.1.84.130";
+const BACKEND_URL = "http://localhost:3000";
 
 const TIMEFRAMES = [
   { label: "1m",  tf: 1    },
@@ -18,40 +25,44 @@ const ASSETS = [
 
 const TF_LIMITS = { 1: 500, 5: 500, 60: 500, 1440: 365 };
 
-// Correct time unit AND step size per timeframe
 function getTimeConfig(tf) {
-  // stepSize = interval between tick labels
-  // chosen so labels show a clean readable interval:
-  // 1m  window = 2hrs    → tick every 10 min
-  // 5m  window = 24hrs   → tick every 2 hours
-  // 1h  window = 7 days  → tick every 24 hours
-  // 1d  window = 1 year  → tick every 30 days
   if (tf >= 1440) return { unit: "day",    stepSize: 30 };
   if (tf >= 60)   return { unit: "hour",   stepSize: 24 };
   if (tf >= 5)    return { unit: "minute", stepSize: 120 };
   return            { unit: "minute", stepSize: 10 };
 }
 
+// ── DOM references ──────────────────────────────────────────
 const priceBox      = document.getElementById("priceBox");
 const tfSelectorDiv = document.getElementById("tfSelector");
 const assetSelector = document.getElementById("assetSelector");
 const canvas        = document.getElementById("chart");
+const rsiCanvas     = document.getElementById("rsiChart");
 const alertForm     = document.getElementById("alertForm");
 const alertList     = document.getElementById("alertList");
 const alertHistory  = document.getElementById("alertHistory");
 
-let chartInstance   = null;
-let selectedTf      = loadTfFromStorage();
-let lastTfUsed      = null;
-let lastAssetCount  = 0;
-let selectedAssets  = loadAssetsFromStorage();
-let historicalCache = {};
+// ── State ───────────────────────────────────────────────────
+let chartInstance    = null;
+let rsiChartInstance = null;
+let selectedTf       = loadTfFromStorage();
+let lastTfUsed       = null;
+let lastAssetCount   = 0;
+let selectedAssets   = loadAssetsFromStorage();
+let historicalCache  = {};
 
+// US-11: indicator toggle state
+let showEMA20 = loadIndicator("showEMA20", true);
+let showEMA50 = loadIndicator("showEMA50", true);
+let showRSI   = loadIndicator("showRSI",   true);
+
+// ── localStorage helpers ────────────────────────────────────
 function loadTfFromStorage() {
   const saved = localStorage.getItem("selectedTf");
   return saved ? parseInt(saved) : DEFAULT_TF;
 }
 function saveTfToStorage(tf) { localStorage.setItem("selectedTf", tf); }
+
 function loadAssetsFromStorage() {
   try {
     const saved = localStorage.getItem("selectedAssets");
@@ -62,6 +73,15 @@ function saveAssetsToStorage(assets) {
   localStorage.setItem("selectedAssets", JSON.stringify(assets));
 }
 
+function loadIndicator(key, def) {
+  const saved = localStorage.getItem(key);
+  return saved !== null ? saved === "true" : def;
+}
+function saveIndicator(key, val) {
+  localStorage.setItem(key, String(val));
+}
+
+// ── Chart destroy ────────────────────────────────────────────
 function destroyChart() {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   const existing = Chart.getChart(canvas);
@@ -70,6 +90,13 @@ function destroyChart() {
   lastAssetCount = 0;
 }
 
+function destroyRSI() {
+  if (rsiChartInstance) { rsiChartInstance.destroy(); rsiChartInstance = null; }
+  const existing = Chart.getChart(rsiCanvas);
+  if (existing) existing.destroy();
+}
+
+// ── Candle merge ────────────────────────────────────────────
 function mergeCandles(historical, live) {
   if (!live || live.length === 0) return historical;
   if (!historical || historical.length === 0) return live;
@@ -78,7 +105,93 @@ function mergeCandles(historical, live) {
   return [...baseCandles, ...live];
 }
 
-// ── Timeframe Selector ──────────────────────────────────────
+// ============================================================
+// US-11: Technical Indicator Calculations
+// ============================================================
+
+// EMA — Exponential Moving Average
+function calcEMA(candles, period) {
+  if (candles.length < period) return [];
+  const k      = 2 / (period + 1);
+  const result = [];
+  let ema      = candles.slice(0, period).reduce((s, c) => s + c.close, 0) / period;
+  result.push({ x: candles[period - 1].time, y: parseFloat(ema.toFixed(2)) });
+  for (let i = period; i < candles.length; i++) {
+    ema = candles[i].close * k + ema * (1 - k);
+    result.push({ x: candles[i].time, y: parseFloat(ema.toFixed(2)) });
+  }
+  return result;
+}
+
+// RSI — Relative Strength Index (period 14)
+function calcRSI(candles, period = 14) {
+  if (candles.length < period + 1) return [];
+  const result = [];
+  let gains = 0, losses = 0;
+
+  // Initial average
+  for (let i = 1; i <= period; i++) {
+    const diff = candles[i].close - candles[i - 1].close;
+    if (diff >= 0) gains  += diff;
+    else           losses -= diff;
+  }
+  let avgGain = gains  / period;
+  let avgLoss = losses / period;
+
+  const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+  result.push({ x: candles[period].time, y: parseFloat(rsi.toFixed(2)) });
+
+  // Smoothed RSI (Wilder's method)
+  for (let i = period + 1; i < candles.length; i++) {
+    const diff = candles[i].close - candles[i - 1].close;
+    const gain = diff > 0 ? diff : 0;
+    const loss = diff < 0 ? -diff : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    const r = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+    result.push({ x: candles[i].time, y: parseFloat(r.toFixed(2)) });
+  }
+  return result;
+}
+
+// ============================================================
+// US-11: Indicator Toggle UI
+// ============================================================
+function buildIndicatorToggles() {
+  const container = document.getElementById("indicatorToggles");
+  if (!container) return;
+
+  const indicators = [
+    { key: "showEMA20", label: "EMA 20", color: "#3b82f6", get: () => showEMA20, set: v => { showEMA20 = v; } },
+    { key: "showEMA50", label: "EMA 50", color: "#f97316", get: () => showEMA50, set: v => { showEMA50 = v; } },
+    { key: "showRSI",   label: "RSI 14", color: "#a855f7", get: () => showRSI,   set: v => { showRSI   = v; } },
+  ];
+
+  container.innerHTML = "";
+  indicators.forEach(({ key, label, color, get, set }) => {
+    const btn = document.createElement("button");
+    btn.className   = "indicator-btn" + (get() ? " active" : "");
+    btn.textContent = label;
+    btn.style.setProperty("--ind-color", color);
+
+    btn.addEventListener("click", () => {
+      const newVal = !get();
+      set(newVal);
+      saveIndicator(key, newVal);
+      btn.classList.toggle("active", newVal);
+      // Rebuild chart with updated indicators
+      destroyChart();
+      destroyRSI();
+      loadCandleChart();
+    });
+
+    container.appendChild(btn);
+  });
+}
+
+// ============================================================
+// Timeframe Selector (US-10)
+// ============================================================
 function buildTfSelector() {
   tfSelectorDiv.innerHTML = "";
   TIMEFRAMES.forEach(({ label, tf }) => {
@@ -94,13 +207,16 @@ function buildTfSelector() {
       document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       destroyChart();
+      destroyRSI();
       await loadCandleChart();
     });
     tfSelectorDiv.appendChild(btn);
   });
 }
 
-// ── Asset Selector ──────────────────────────────────────────
+// ============================================================
+// Asset Selector (US-9)
+// ============================================================
 function buildAssetSelector() {
   assetSelector.innerHTML = "";
   ASSETS.forEach(({ symbol, label, color }) => {
@@ -125,13 +241,16 @@ function buildAssetSelector() {
       saveAssetsToStorage(selectedAssets);
       historicalCache = {};
       destroyChart();
+      destroyRSI();
       await loadCandleChart();
     });
     assetSelector.appendChild(btn);
   });
 }
 
-// ── Price Box ───────────────────────────────────────────────
+// ============================================================
+// Live Price Box (US-8)
+// ============================================================
 async function updatePrice() {
   try {
     const res  = await fetch(`${BACKEND_URL}/price`);
@@ -149,48 +268,41 @@ async function updatePrice() {
   }
 }
 
-// ── Normalize to % but keep rawPrice for tooltip ────────────
+// ============================================================
+// Multi-asset normalization (US-9)
+// ============================================================
 function normalizeToPercent(candles) {
   if (!candles || candles.length === 0) return [];
   const base = candles[0].close;
   return candles.map(c => ({
     x:        c.time,
     y:        ((c.close - base) / base) * 100,
-    rawPrice: c.close,   // actual price stored for tooltip display
+    rawPrice: c.close,
   }));
 }
 
-// ── Chart Config ─────────────────────────────────────────────
+// ============================================================
+// Build main chart config
+// ============================================================
 function buildChartConfig(datasets, isSingle) {
   const { unit, stepSize } = getTimeConfig(selectedTf);
-
   return {
     type: isSingle ? "candlestick" : "line",
     data: { datasets },
     options: {
-      responsive: true,
+      responsive:          true,
       maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: "index", intersect: false },
+      animation:           false,
+      interaction:         { mode: "index", intersect: false },
       scales: {
         x: {
           type: "time",
           time: {
-            unit,
-            stepSize,
-            displayFormats: {
-              minute: "HH:mm",
-              hour:   "MMM d HH:mm",
-              day:    "MMM d",
-            },
+            unit, stepSize,
+            displayFormats: { minute: "HH:mm", hour: "MMM d HH:mm", day: "MMM d" },
           },
-          ticks: {
-            color: "#aaa",
-            maxRotation: 0,
-            autoSkip: true,
-            maxRotation: 0,
-          },
-          grid: { color: "rgba(255,255,255,0.05)" },
+          ticks: { color: "#aaa", maxRotation: 0, autoSkip: true },
+          grid:  { color: "rgba(255,255,255,0.05)" },
         },
         y: {
           ticks: {
@@ -204,25 +316,31 @@ function buildChartConfig(datasets, isSingle) {
       },
       plugins: {
         legend: {
-          display: !isSingle,
-          labels: { color: "#e8eaf0", font: { family: "'IBM Plex Mono'" } }
+          display: !isSingle || (showEMA20 || showEMA50),
+          labels:  { color: "#e8eaf0", font: { family: "'IBM Plex Mono'" }, boxWidth: 24 }
+        },
+        zoom: {
+          pan:  { enabled: false },
+          zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: "x" },
         },
         tooltip: {
           callbacks: {
             label: item => {
-              if (isSingle) {
+              if (item.dataset.type === "candlestick" || (isSingle && item.dataset.label === "BTC")) {
                 const d = item.raw;
-                return [
-                  `Open:  $${Number(d.o).toLocaleString()}`,
-                  `High:  $${Number(d.h).toLocaleString()}`,
-                  `Low:   $${Number(d.l).toLocaleString()}`,
-                  `Close: $${Number(d.c).toLocaleString()}`,
-                ];
+                if (d && d.o !== undefined) {
+                  return [
+                    `Open:  $${Number(d.o).toLocaleString()}`,
+                    `High:  $${Number(d.h).toLocaleString()}`,
+                    `Low:   $${Number(d.l).toLocaleString()}`,
+                    `Close: $${Number(d.c).toLocaleString()}`,
+                  ];
+                }
               }
-              // ← FIXED: show actual price from rawPrice, not % value
-              const price = item.raw.rawPrice;
-              const pct   = Number(item.raw.y).toFixed(2);
-              return `${item.dataset.label}: $${Number(price).toLocaleString()} (${pct}%)`;
+              if (!isSingle && item.raw && item.raw.rawPrice !== undefined) {
+                return `${item.dataset.label}: $${Number(item.raw.rawPrice).toLocaleString()} (${Number(item.raw.y).toFixed(2)}%)`;
+              }
+              return `${item.dataset.label}: $${Number(item.raw.y || item.parsed.y).toLocaleString()}`;
             },
           },
         },
@@ -231,17 +349,88 @@ function buildChartConfig(datasets, isSingle) {
   };
 }
 
-// ── Load Candle Chart ────────────────────────────────────────
+// ============================================================
+// Build RSI chart config
+// ============================================================
+function buildRSIConfig(rsiData) {
+  const { unit, stepSize } = getTimeConfig(selectedTf);
+  return {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label:       "RSI 14",
+          data:        rsiData,
+          borderColor: "#a855f7",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension:     0.2,
+          fill:        false,
+        },
+        // Overbought line at 70
+        {
+          label:       "Overbought (70)",
+          data:        rsiData.map(d => ({ x: d.x, y: 70 })),
+          borderColor: "rgba(239,83,80,0.5)",
+          borderWidth: 1,
+          borderDash:  [4, 4],
+          pointRadius: 0,
+          fill:        false,
+        },
+        // Oversold line at 30
+        {
+          label:       "Oversold (30)",
+          data:        rsiData.map(d => ({ x: d.x, y: 30 })),
+          borderColor: "rgba(38,166,154,0.5)",
+          borderWidth: 1,
+          borderDash:  [4, 4],
+          pointRadius: 0,
+          fill:        false,
+        },
+      ],
+    },
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      animation:           false,
+      interaction:         { mode: "index", intersect: false },
+      scales: {
+        x: {
+          type: "time",
+          time: { unit, stepSize, displayFormats: { minute: "HH:mm", hour: "MMM d HH:mm", day: "MMM d" } },
+          ticks: { color: "#aaa", maxRotation: 0, autoSkip: true },
+          grid:  { color: "rgba(255,255,255,0.05)" },
+        },
+        y: {
+          min:   0,
+          max:   100,
+          ticks: { color: "#aaa", stepSize: 20 },
+          grid:  { color: "rgba(255,255,255,0.08)" },
+        },
+      },
+      plugins: {
+        legend: {
+          display: true,
+          labels:  { color: "#e8eaf0", font: { family: "'IBM Plex Mono'", size: 10 }, boxWidth: 16 }
+        },
+      },
+    },
+  };
+}
+
+// ============================================================
+// Main chart load — candlestick + EMA overlays + RSI panel
+// ============================================================
 async function loadCandleChart() {
   try {
     const wrapper  = document.querySelector(".chart-wrapper");
     const limit    = TF_LIMITS[selectedTf] || 120;
     const isSingle = selectedAssets.length === 1;
     const datasets = [];
+    let   btcCandles = [];
 
     for (const symbol of selectedAssets) {
       const cacheKey = `${symbol}:${selectedTf}`;
-
       if (!historicalCache[cacheKey]) {
         const res = await fetch(
           `${BACKEND_URL}/candles/history?tf=${selectedTf}&limit=${limit}&symbol=${symbol}`
@@ -253,7 +442,8 @@ async function loadCandleChart() {
       if (symbol === "BTCUSDT") {
         const liveRes = await fetch(`${BACKEND_URL}/candles?tf=${selectedTf}`);
         const live    = await liveRes.json();
-        merged = mergeCandles(historicalCache[cacheKey], live);
+        merged        = mergeCandles(historicalCache[cacheKey], live);
+        btcCandles    = merged; // save for indicators
       }
 
       const asset = ASSETS.find(a => a.symbol === symbol);
@@ -261,10 +451,38 @@ async function loadCandleChart() {
       if (isSingle) {
         datasets.push({
           label: asset.label,
-          data: merged.map(c => ({ x: c.time, o: c.open, h: c.high, l: c.low, c: c.close })),
+          data:  merged.map(c => ({ x: c.time, o: c.open, h: c.high, l: c.low, c: c.close })),
           color:       { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
           borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
         });
+
+        // US-11: Add EMA overlays (single asset only)
+        if (showEMA20) {
+          const ema20 = calcEMA(merged, 20);
+          datasets.push({
+            label:       "EMA 20",
+            data:        ema20,
+            borderColor: "#3b82f6",
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension:     0.3,
+            fill:        false,
+            type:        "line",
+          });
+        }
+        if (showEMA50) {
+          const ema50 = calcEMA(merged, 50);
+          datasets.push({
+            label:       "EMA 50",
+            data:        ema50,
+            borderColor: "#f97316",
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension:     0.3,
+            fill:        false,
+            type:        "line",
+          });
+        }
       } else {
         datasets.push({
           label:           asset.label,
@@ -283,18 +501,17 @@ async function loadCandleChart() {
       wrapper.setAttribute("data-empty", "Loading chart data…");
       return;
     }
-
     wrapper.removeAttribute("data-empty");
 
+    // Build/update main chart
     const needsRebuild = !chartInstance
-      || lastTfUsed !== selectedTf
+      || lastTfUsed     !== selectedTf
       || lastAssetCount !== selectedAssets.length;
 
     if (!needsRebuild) {
       datasets.forEach((ds, i) => {
-        if (chartInstance.data.datasets[i]) {
+        if (chartInstance.data.datasets[i])
           chartInstance.data.datasets[i].data = ds.data;
-        }
       });
       chartInstance.update("none");
     } else {
@@ -304,12 +521,26 @@ async function loadCandleChart() {
       lastAssetCount = selectedAssets.length;
     }
 
+    // US-11: RSI panel — only for single BTC asset
+    const rsiWrapper = document.getElementById("rsiWrapper");
+    if (isSingle && showRSI && btcCandles.length > 15) {
+      const rsiData = calcRSI(btcCandles);
+      if (rsiWrapper) rsiWrapper.style.display = "block";
+      destroyRSI();
+      rsiChartInstance = new Chart(rsiCanvas, buildRSIConfig(rsiData));
+    } else {
+      if (rsiWrapper) rsiWrapper.style.display = "none";
+      destroyRSI();
+    }
+
   } catch (err) {
     console.error("Chart error:", err);
   }
 }
 
-// ── Alert UI ─────────────────────────────────────────────────
+// ============================================================
+// Alert UI (US-6)
+// ============================================================
 async function loadAlerts() {
   try {
     const res    = await fetch(`${BACKEND_URL}/alerts`);
@@ -379,9 +610,12 @@ async function deleteAlert(id) {
   }
 }
 
-// ── Boot ─────────────────────────────────────────────────────
+// ============================================================
+// Boot sequence
+// ============================================================
 buildTfSelector();
 buildAssetSelector();
+buildIndicatorToggles();
 updatePrice();
 loadCandleChart();
 loadAlerts();
@@ -392,27 +626,23 @@ if (alertForm) alertForm.addEventListener("submit", createAlert);
 setInterval(updatePrice,      2000);
 setInterval(loadCandleChart,  5000);
 setInterval(loadAlerts,      10000);
-setInterval(loadAlertHistory,15000);
+setInterval(loadAlertHistory, 15000);
 
 // ============================================================
+// Zoom controls
 // ============================================================
-// Zoom controls (+/- buttons)
-// ============================================================
-function zoomIn()   { if (chartInstance) chartInstance.zoom(1.2); }
-function zoomOut()  { if (chartInstance) chartInstance.zoom(0.8); }
-function resetZoom(){ if (chartInstance) chartInstance.resetZoom(); }
+function zoomIn()    { if (chartInstance) chartInstance.zoom(1.2); }
+function zoomOut()   { if (chartInstance) chartInstance.zoom(0.8); }
+function resetZoom() { if (chartInstance) chartInstance.resetZoom(); }
 
 // ============================================================
-// Manual pan — hold left mouse button and drag in any direction
+// Manual pan — drag in any direction
 // ============================================================
 (function setupPan() {
   let isDragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let startXMin  = 0;
-  let startXMax  = 0;
-  let startYMin  = 0;
-  let startYMax  = 0;
+  let dragStartX = 0, dragStartY = 0;
+  let startXMin  = 0, startXMax  = 0;
+  let startYMin  = 0, startYMax  = 0;
 
   function onMouseDown(e) {
     if (!chartInstance) return;
@@ -421,40 +651,27 @@ function resetZoom(){ if (chartInstance) chartInstance.resetZoom(); }
     dragStartY = e.clientY;
     const xs = chartInstance.scales.x;
     const ys = chartInstance.scales.y;
-    startXMin = xs.min;   startXMax = xs.max;
-    startYMin = ys.min;   startYMax = ys.max;
+    startXMin = xs.min; startXMax = xs.max;
+    startYMin = ys.min; startYMax = ys.max;
     e.currentTarget.style.cursor = "grabbing";
     e.preventDefault();
   }
 
   function onMouseMove(e) {
     if (!isDragging || !chartInstance) return;
+    const xs     = chartInstance.scales.x;
+    const ys     = chartInstance.scales.y;
+    const dx     = e.clientX - dragStartX;
+    const dy     = e.clientY - dragStartY;
+    const xRange = startXMax - startXMin;
+    const yRange = startYMax - startYMin;
+    const xPx    = xs.right  - xs.left;
+    const yPx    = ys.bottom - ys.top;
+    const xDelta = (dx / xPx) * xRange;
+    const yDelta = (dy / yPx) * yRange;
 
-    const xs = chartInstance.scales.x;
-    const ys = chartInstance.scales.y;
-
-    // Pixel → data unit conversion
-    const dx      = e.clientX - dragStartX;
-    const dy      = e.clientY - dragStartY;
-    const xRange  = startXMax - startXMin;
-    const yRange  = startYMax - startYMin;
-    const xPx     = xs.right  - xs.left;
-    const yPx     = ys.bottom - ys.top;
-    const xDelta  = (dx / xPx) * xRange;
-    const yDelta  = (dy / yPx) * yRange;
-
-    // Pan x-axis (drag right = go back in time)
-    chartInstance.zoomScale("x", {
-      min: startXMin - xDelta,
-      max: startXMax - xDelta,
-    }, "none");
-
-    // Pan y-axis (drag down = see lower prices)
-    chartInstance.zoomScale("y", {
-      min: startYMin + yDelta,
-      max: startYMax + yDelta,
-    }, "none");
-
+    chartInstance.zoomScale("x", { min: startXMin - xDelta, max: startXMax - xDelta }, "none");
+    chartInstance.zoomScale("y", { min: startYMin + yDelta, max: startYMax + yDelta }, "none");
     chartInstance.update("none");
   }
 
@@ -462,6 +679,40 @@ function resetZoom(){ if (chartInstance) chartInstance.resetZoom(); }
     isDragging = false;
     if (e.currentTarget) e.currentTarget.style.cursor = "grab";
   }
+
+  // Touch support (US-12)
+  function onTouchStart(e) {
+    if (e.touches.length !== 1) return;
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    if (!chartInstance) return;
+    const xs = chartInstance.scales.x;
+    const ys = chartInstance.scales.y;
+    startXMin = xs.min; startXMax = xs.max;
+    startYMin = ys.min; startYMax = ys.max;
+  }
+
+  function onTouchMove(e) {
+    if (!isDragging || !chartInstance || e.touches.length !== 1) return;
+    e.preventDefault();
+    const xs     = chartInstance.scales.x;
+    const ys     = chartInstance.scales.y;
+    const dx     = e.touches[0].clientX - dragStartX;
+    const dy     = e.touches[0].clientY - dragStartY;
+    const xRange = startXMax - startXMin;
+    const yRange = startYMax - startYMin;
+    const xPx    = xs.right  - xs.left;
+    const yPx    = ys.bottom - ys.top;
+    const xDelta = (dx / xPx) * xRange;
+    const yDelta = (dy / yPx) * yRange;
+
+    chartInstance.zoomScale("x", { min: startXMin - xDelta, max: startXMax - xDelta }, "none");
+    chartInstance.zoomScale("y", { min: startYMin + yDelta, max: startYMax + yDelta }, "none");
+    chartInstance.update("none");
+  }
+
+  function onTouchEnd() { isDragging = false; }
 
   function attach() {
     const c = document.getElementById("chart");
@@ -471,6 +722,10 @@ function resetZoom(){ if (chartInstance) chartInstance.resetZoom(); }
     c.addEventListener("mousemove",  onMouseMove);
     c.addEventListener("mouseup",    onMouseUp);
     c.addEventListener("mouseleave", onMouseUp);
+    // Touch events for mobile (US-12)
+    c.addEventListener("touchstart", onTouchStart, { passive: true });
+    c.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    c.addEventListener("touchend",   onTouchEnd);
   }
 
   if (document.readyState === "loading") {

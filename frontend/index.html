@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Market Dashboard</title>
 
   <!-- Chart.js core -->
@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <!-- Candlestick support -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
-  <!-- Hammer.js (required for pinch zoom) -->
+  <!-- Hammer.js (pinch zoom) -->
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <!-- Zoom plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -25,35 +25,45 @@
     <p class="subtitle">Live Cryptocurrency Prices</p>
   </header>
 
-  <!-- ── Live price ticker ── -->
+  <!-- Live price ticker -->
   <div id="priceBox">Loading price...</div>
 
-  <!-- ── Asset selector (US-9) ── -->
+  <!-- Asset selector (US-9) -->
   <div class="section-label">Compare Assets <span class="hint">(select up to 4)</span></div>
   <div id="assetSelector" class="asset-selector"></div>
 
-  <!-- ── Chart controls ── -->
+  <!-- Chart controls -->
   <div class="chart-controls">
-    <span class="chart-label">Candlestick / Comparison Chart</span>
-    <div style="display:flex; gap:0.5rem; align-items:center;">
-      <!-- Zoom controls -->
+    <div class="chart-controls-left">
+      <span class="chart-label">Candlestick / Comparison Chart</span>
+      <!-- US-11: Indicator toggles -->
+      <div id="indicatorToggles" class="indicator-toggles"></div>
+    </div>
+    <div class="chart-controls-right">
       <div class="zoom-controls">
-        <button class="zoom-btn" onclick="zoomIn()"  title="Zoom In">+</button>
-        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+        <button class="zoom-btn" onclick="zoomIn()"   title="Zoom In">+</button>
+        <button class="zoom-btn" onclick="zoomOut()"  title="Zoom Out">−</button>
         <button class="zoom-btn reset" onclick="resetZoom()" title="Reset Zoom">↺</button>
       </div>
       <div id="tfSelector"></div>
     </div>
   </div>
 
-  <!-- ── Chart canvas ── -->
+  <!-- Main candlestick chart -->
   <div class="chart-wrapper">
     <canvas id="chart"></canvas>
   </div>
 
-  <!-- ── Alert Panel (US-6) ── -->
-  <div class="alert-panel">
+  <!-- US-11: RSI panel (hidden by default, shown when RSI toggled on) -->
+  <div id="rsiWrapper" class="rsi-wrapper" style="display:none;">
+    <div class="rsi-label">RSI (14)</div>
+    <div class="rsi-chart-box">
+      <canvas id="rsiChart"></canvas>
+    </div>
+  </div>
 
+  <!-- Alert Panel (US-6) -->
+  <div class="alert-panel">
     <div class="alert-col">
       <div class="section-label">Set Price Alert</div>
       <form id="alertForm" class="alert-form">
@@ -72,16 +82,13 @@
                class="alert-input" required />
         <button type="submit" class="alert-submit">Set Alert</button>
       </form>
-
       <div class="section-label" style="margin-top:1.25rem;">Active Alerts</div>
       <div id="alertList"></div>
     </div>
-
     <div class="alert-col">
       <div class="section-label">Alert History</div>
       <div id="alertHistory"></div>
     </div>
-
   </div>
 
   <script src="app.js"></script>
