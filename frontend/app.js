@@ -6,7 +6,7 @@
 // Sprint 4: US-11 EMA/RSI Technical Indicators, US-12 Responsive UI
 // ============================================================
 
-const BACKEND_URL = "http://localhost:3000";
+const BACKEND_URL = "https://13.234.113.78";
 
 const TIMEFRAMES = [
   { label: "1m",  tf: 1    },
