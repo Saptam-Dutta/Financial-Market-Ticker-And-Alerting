@@ -1,9 +1,3 @@
-// ============================================================
-// redisClient.js
-// Author: Rishabh Ahuja (Backend & Data Streaming Lead)
-// Fix: read REDIS_HOST and REDIS_PORT from environment variables
-//      so Docker Compose service name "redis" resolves correctly
-// ============================================================
 
 const Redis = require("ioredis");
 

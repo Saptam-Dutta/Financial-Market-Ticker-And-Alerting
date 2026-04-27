@@ -1,12 +1,5 @@
-// ============================================================
-// app.js — Financial Market Ticker Dashboard
-// Author: Gavit Priyanshu Bhimsing (Frontend & Visualization Lead)
-// Sprint 2: US-8 Candlestick Chart, US-10 Timeframe Selection
-// Sprint 3: US-9 Multi-Asset Comparison, US-6 Alert UI
-// Sprint 4: US-11 EMA/RSI Technical Indicators, US-12 Responsive UI
-// ============================================================
 
-const BACKEND_URL = "https://13.234.113.78";
+const BACKEND_URL = "http://15.206.116.11:3000";
 
 const TIMEFRAMES = [
   { label: "1m",  tf: 1    },

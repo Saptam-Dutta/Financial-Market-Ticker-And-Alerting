@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [2026-03-21 12:24:13] INFO  Redis connected
 [2026-03-21 12:24:13] INFO  Server starting on port 3000
 [2026-03-21 12:24:13] INFO  Server running on port 3000
@@ -35,3 +36,52 @@
 [2026-04-11 20:01:29] INFO  Health check requested
 [2026-04-11 20:02:12] INFO  Health check requested
 [2026-04-11 20:03:27] INFO  Health check requested
+=======
+[2026-03-21 17:39:26] INFO  Redis connected
+[2026-03-21 17:39:26] INFO  Server starting on port 3000
+[2026-03-21 17:39:26] INFO  Server running on port 3000
+[2026-03-21 17:39:52] INFO  Health check requested
+[2026-03-21 17:45:29] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"5m","limit":500}
+[2026-03-21 17:45:42] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1m","limit":500}
+[2026-03-21 17:45:56] INFO  Fetched candles from Binance {"symbol":"ETHUSDT","interval":"1m","limit":500}
+[2026-03-21 17:45:57] INFO  Fetched candles from Binance {"symbol":"BNBUSDT","interval":"1m","limit":500}
+[2026-03-21 17:45:58] INFO  Fetched candles from Binance {"symbol":"SOLUSDT","interval":"1m","limit":500}
+[2026-03-21 17:47:35] INFO  Fetched candles from Binance {"symbol":"ETHUSDT","interval":"1m","limit":500}
+[2026-03-21 17:47:35] INFO  Fetched candles from Binance {"symbol":"BNBUSDT","interval":"1m","limit":500}
+[2026-03-21 17:47:36] INFO  Fetched candles from Binance {"symbol":"BNBUSDT","interval":"1m","limit":500}
+[2026-03-21 17:47:36] INFO  Fetched candles from Binance {"symbol":"SOLUSDT","interval":"1m","limit":500}
+[2026-03-21 17:49:18] INFO  Fetched candles from Binance {"symbol":"BNBUSDT","interval":"1m","limit":500}
+[2026-03-21 17:49:18] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1m","limit":500}
+[2026-03-21 17:49:54] INFO  Alert created {"id":"alert:1774115394270:jpd02","symbol":"BTCUSDT","price":70373,"direction":"above","createdAt":1774115394271}
+[2026-03-21 17:49:58] WARN  ALERT TRIGGERED {"id":"alert:1774115394270:jpd02","symbol":"BTCUSDT","direction":"above","threshold":70373,"currentPrice":70373.39}
+[2026-03-21 17:50:38] INFO  Alert created {"id":"alert:1774115438101:rqke8","symbol":"BTCUSDT","price":70350,"direction":"below","createdAt":1774115438101}
+[2026-03-21 17:50:39] WARN  ALERT TRIGGERED {"id":"alert:1774115438101:rqke8","symbol":"BTCUSDT","direction":"below","threshold":70350,"currentPrice":70343.58}
+[2026-03-21 17:50:39] WARN  ALERT TRIGGERED {"id":"alert:1774115438101:rqke8","symbol":"BTCUSDT","direction":"below","threshold":70350,"currentPrice":70343.58}
+[2026-03-21 17:51:01] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1m","limit":500}
+[2026-04-11 15:19:08] INFO  Redis connected
+[2026-04-11 15:19:09] INFO  Server starting on port 3000
+[2026-04-11 15:19:09] INFO  Server running on port 3000
+[2026-04-11 15:20:01] INFO  Redis connected
+[2026-04-11 15:20:01] INFO  Server starting on port 3000
+[2026-04-11 15:20:01] INFO  Server running on port 3000
+[2026-04-11 17:40:06] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1d","limit":365}
+[2026-04-11 17:42:45] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1d","limit":365}
+[2026-04-11 17:45:57] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1d","limit":365}
+[2026-04-11 17:48:24] INFO  Redis connected
+[2026-04-11 17:48:24] INFO  Server starting on port 3000
+[2026-04-11 17:48:24] INFO  Server running on port 3000
+[2026-04-11 17:48:25] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1m","limit":500}
+[2026-04-11 17:49:30] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"5m","limit":500}
+[2026-04-11 17:49:38] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1h","limit":500}
+[2026-04-11 17:49:40] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1d","limit":365}
+[2026-04-11 17:49:45] INFO  Fetched candles from Binance {"symbol":"BTCUSDT","interval":"1m","limit":500}
+[2026-04-27 20:25:35] INFO  Redis connected
+[2026-04-27 20:25:35] INFO  Server starting on port 3000
+[2026-04-27 20:25:35] INFO  Server running on port 3000
+[2026-04-27 20:27:00] INFO  Redis connected
+[2026-04-27 20:27:00] INFO  Server starting on port 3000
+[2026-04-27 20:27:00] INFO  Server running on port 3000
+[2026-04-27 20:37:32] INFO  Redis connected
+[2026-04-27 20:37:32] INFO  Server starting on port 3000
+[2026-04-27 20:37:32] INFO  Server running on port 3000
+>>>>>>> 24640cc (final backend fix)

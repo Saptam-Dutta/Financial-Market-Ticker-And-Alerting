@@ -11,7 +11,8 @@ const aggregateCandles         = require("./utils/candles");
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: "*" }));
+const cors = require("cors");
+app.use(cors());
 app.use(express.json());
 
 const logger = winston.createLogger({
@@ -282,8 +283,8 @@ async function start() {
   // US-7: Log WebSocket lifecycle events
   logger.info(`Server starting on port ${PORT}`);
 
-  app.listen(PORT, "0.0.0.0", () => {
-    logger.info(`Server running on port ${PORT}`);
+  app.listen(3000, '0.0.0.0', () => {
+	console.log("Server running on port 3000");
   });
 }
 
